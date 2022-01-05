@@ -1,19 +1,19 @@
-# potentiometer_plot.py
 
 import numpy as np
 import serial
 import time
 import matplotlib.pyplot as plt
+import pandas as pd
 
-M = 1000
+#M: Número de datos a tomar
+M = 400
 
-# make sure the 'COM#' is set according the Windows Device Manager
 
-    
-ser = serial.Serial('COM3', 9600)#, timeout=1)
+   
+ser = serial.Serial('COM3', 9600, timeout=1)
 time.sleep(2)
 
-
+#Lectura datos
 
 data = []
 
@@ -21,24 +21,20 @@ start = time.time()
 
 for i in range(M):
     line = ser.readline()
-    line = str(line)# read a byte string
-    #print(line)
+    line = str(line)
     if line:
         
         try:
             dat4 = float(line[2:5])
             print(dat4)
                 
-            data.append(dat4) # add int to data list
-            #time.sleep(0.006)
+            data.append(dat4) 
         except:
             print("ERROR: replace method error")
             
 ser.close()
 
-print('DATASHAPE', np.shape(data))
 
-#T = f'Time: {time.time() - start}'
 
 T   = float(time.time() - start)
 
@@ -46,7 +42,7 @@ print(T)
 
 tm = np.linspace(0,T,num=np.shape(data)[0])
 
-    #   build the plot
+#Gráfica
 
 plt.plot(tm,data)
 plt.xlabel('Time')
@@ -55,5 +51,14 @@ plt.title('Microphone Reading vs. Time')
 plt.grid()
 plt.show()
    
+Table = np.zeros((np.shape(data)[0],2))
+print('Table-shape', np.shape(Table))
+Table[:,0] = tm
+Table[:,1] = data
+
+#Guardar datos
+
+pd.DataFrame(Table).to_csv("FFT/one.csv")
+
     
 
