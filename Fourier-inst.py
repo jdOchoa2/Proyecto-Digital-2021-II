@@ -1,3 +1,5 @@
+#Librerías
+
 import numpy as np
 import serial
 import time
@@ -8,12 +10,43 @@ from scipy import fftpack
 from numpy import genfromtxt
 
 #M: Número de datos a tomar
-M = 400
+M = 50
 
 
-   
+#Definir entradas Arduino
+
 ser = serial.Serial('COM3', 9600, timeout=1)
 time.sleep(2)
+
+
+B = False
+
+#Umbral para inicio toma datos con sensor ajustado en sensibilidad ~660
+
+U = 700
+
+print('Listo para iniciar lectura de datos')
+
+
+time.sleep(1)
+
+for k in range(2000):
+    line = ser.readline()
+    line = str(line)
+    #print(line)
+    
+    try:
+        if int(str(ser.readline())[2:5]) > U:
+            B = True
+            break
+    except:
+        pass
+
+if B == False:
+    print('No se leyó ningún dato')
+    exit()
+else:
+    print('Inicio')
 
 #Lectura datos
 
@@ -37,24 +70,16 @@ for i in range(M):
 ser.close()
 
 
-
 T   = float(time.time() - start)
 
 print(T)
 
 tm = np.linspace(0,T,num=np.shape(data)[0])
 
-#Gráfica
-
-#plt.plot(tm,data)
-#plt.xlabel('Time')
-#plt.ylabel('Microphone Reading')
-#plt.title('Microphone Reading vs. Time')
-#plt.grid()
-#plt.show()
+#Tabla de datos
    
 Table = np.zeros((np.shape(data)[0],2))
-print('Table-shape', np.shape(Table))
+#print('Table-shape', np.shape(Table))
 Table[:,0] = tm
 Table[:,1] = data
 
@@ -67,15 +92,17 @@ time.sleep(2)
 one = genfromtxt('FFT/one.csv', delimiter=',')
 #two = genfromtxt('FFT/two.csv', delimiter=',')
 
+#Lectura de datos 
 
 t1 = one[1:,1]
 y1 = one[1:,2]
+
+#FFT
 
 N1 = np.shape(t1)[0]
 
 T1 = t1[-1]
 
-print(T1)
 
 Ts1 = T1/N1
 
@@ -94,7 +121,9 @@ M = int(np.size(np.abs(Y1))/2)
 
 Y1max = np.argmax(np.abs(Y1)[1:M])
 
-print('One-max-freq:', f1[Y1max+1])
+print('Max-freq:', f1[Y1max+1], 'Hz')
+
+#Gráficas
 
 plt.subplot(2,1,1)
 
