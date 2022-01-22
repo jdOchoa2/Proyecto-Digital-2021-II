@@ -8,14 +8,14 @@ def ReadSave():
     File = open("Data.txt",'w')
     n=int(sys.argv[1])
     ser = serial.Serial('/dev/cu.usbmodem14101', 9600)
-    print(n)
     for ii in range(3*n):
         data = str(ser.readline())
+        print(data)
         File.write(data[2:(len(data)-5)])
         File.write('\n')
     File.close()
 
-def Multi(LR,CL,CR):
+def Multi(LR,LC,CR):
     #Neccesary arrays
     Center = np.zeros(3)
     a = np.zeros(3)
@@ -23,7 +23,7 @@ def Multi(LR,CL,CR):
     c = np.zeros(3)
 
     a[0] = LR
-    a[1] = CL
+    a[1] = LC
     a[2] = CR
     
     #Hiperbola variables
@@ -69,7 +69,7 @@ ReadSave()
 
 #Constants
 v = 343
-L = .18
+L = .193
 
 #Read data from txt file
 Data = np.loadtxt("Data.txt")
@@ -81,11 +81,13 @@ Y = np.zeros(N)
 
 #Estimates origin point of each sound
 for ii in range(N):
-    X[ii],Y[ii]=Multi(Data[ii*3],Data[ii*3+1],Data[ii*3+2])
+    X[ii], Y[ii]=Multi(Data[ii*3],Data[ii*3+1],Data[ii*3+2])
     print(X[ii])
     print(Y[ii])
 
 plt.scatter(X,Y)
-plt.xlim(-10,10)
-plt.ylim(0,25)
+plt.scatter([-19.3,0,19.3],[0,0,0])
+#plt.contour(x, y,(x**2/a**2 - y**2/b**2), [1], colors='k')
+plt.xlim(-20,20)
+plt.ylim(0,20)
 plt.show()
