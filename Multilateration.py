@@ -29,13 +29,13 @@ def Multi(LR,LC,CR):
     #Hiperbola variables
     a[:] *= v/(2e6)
     Center[0] = 0.45
-    Center[1] = -9.425
-    Center[2] = 9.5
+    Center[1] = -49/2+0.45
+    Center[2] = 49/2+0.45
     Center[:] /= 100
     
-    c[0] = 38/2
-    c[1] = 19.3/2
-    c[2] = 18.7/2
+    c[0] = 49
+    c[1] = 49/2
+    c[2] = 49/2
     c[:] /= 100
     
     for jj in range(3):
@@ -55,7 +55,7 @@ def Multi(LR,LC,CR):
 
     if det < 0:
         print("\nOops! Unexpected error (x), please try again\n")
-        return 0, 0;
+        return 0, 0,  a, b2, Center
     
     if a[0]>0:
         if a[2]>0:
@@ -71,28 +71,43 @@ def Multi(LR,LC,CR):
     temp = b2[1]*(((x-Center[1])/a[1])**2-1)
     if temp < 0:
         print("\nOops! Unexpected error (y), please try again\n")
-        return 0, 0;
+        return 0, 0, a, b2, Center
     
     y=-math.sqrt(temp)
-    return x*100, y*100;
+    return x*100, y*100, a, b2, Center;
 
-def Plot(X,Y):
+def Plot(X,Y,a,b2,Center):
     #Converts list to numpy array
     X = np.array(X)
     Y = np.array(Y)
-    #Plotting
-    plt.style.use('dark_background')
-    circle = plt.Circle((5, -6.7), 4.7, color='b', fill=False)
     
+    plt.style.use('dark_background')
     fig, ax = plt.subplots()
+
+    #Origins
     ax.scatter(X,Y, color='m')
-    ax.scatter([-19.3,0,19.3],[0,0,0], color='r')
-    ax.set_xlim(-20,20)
-    ax.set_ylim(-20,-0)
-    ax.set_aspect('equal')
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(5))
-    ax.grid(linestyle='-', linewidth=0.3)
+    #Sensors
+    ax.scatter([-48.55,0,48.55],[0,0,0], color='r')
+    #Cup
+    circle = plt.Circle((11.5, -16), 4.7, color='b', fill=False)
     ax.add_patch(circle)
+    #Hiperbolas
+    xr = np.linspace(-50, 50, 400)
+    yr = np.linspace(0, -50, 400)
+    xr, yr = np.meshgrid(xr, yr)
+    Center[:] *= 100
+    a *= 100
+    b2 *= 10000
+    ax.contour(xr, yr,((xr-Center[0])**2/a[0]**2 - (yr)**2/b2[0]), [1], colors='w', linestyles='dashed', linewidths=0.5)
+    ax.contour(xr, yr,((xr-Center[1])**2/a[1]**2 - (yr)**2/b2[1]), [1], colors='w', linestyles='dashed', linewidths=0.5)
+    ax.contour(xr, yr,((xr-Center[2])**2/a[2]**2 - (yr)**2/b2[2]), [1], colors='w', linestyles='dashed', linewidths=0.5)
+
+    ax.set_xlim(0,50)
+    ax.set_ylim(-50,-0)
+    ax.set_aspect('equal')
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax.grid(linestyle='-', linewidth=0.3)
+   
 
     plt.show()
     
@@ -111,7 +126,7 @@ while("y" == new):
         #Reads data from txt file
         Data = np.loadtxt("Data.txt")
         #Estimates origin point of each sound
-        x, y=Multi(Data[0],Data[1],Data[2])
+        x, y, a, b2, Center = Multi(Data[0],Data[1],Data[2])
         #Prints when math errors
         if x == 0 and y == 0:
             continue
@@ -121,9 +136,9 @@ while("y" == new):
         X.append(x)
         Y.append(y)
         #Plot
-        Plot(X,Y)
+        Plot(X,Y,a,b2,Center)
         #Asks if it's a valid point
-        good = input("\nDo you accept this point? [y/n]")
+        good = input("\nDo you accept this point? [y/n] ")
         if good == 'n':
             del X[-1]
             del Y[-1]
