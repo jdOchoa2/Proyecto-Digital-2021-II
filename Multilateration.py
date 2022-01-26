@@ -1,14 +1,14 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import serial
-import sys
 
 def ReadSave():
     File = open("Data.txt",'w')
-    n=int(sys.argv[1])
     ser = serial.Serial('/dev/cu.usbmodem14101', 9600)
-    for ii in range(3*n):
+    print("\nReady to go\n")
+    for ii in range(3):
         data = str(ser.readline())
         print(data)
         File.write(data[2:(len(data)-5)])
@@ -27,15 +27,17 @@ def Multi(LR,LC,CR):
     a[2] = CR
     
     #Hiperbola variables
-    
     a[:] *= v/(2e6)
-    Center[1] = -L/2
-    Center[2] = L/2
-
-    c[0] = L
-    c[1] = L/2
-    c[2] = L/2
-
+    Center[0] = 0.45
+    Center[1] = -9.425
+    Center[2] = 9.5
+    Center[:] /= 100
+    
+    c[0] = 38/2
+    c[1] = 19.3/2
+    c[2] = 18.7/2
+    c[:] /= 100
+    
     for jj in range(3):
         b2[jj] = c[jj]**2 - a[jj]**2
 
@@ -47,47 +49,83 @@ def Multi(LR,LC,CR):
     m2 = A+B
     m1 = -2*(A*Center[2]+B*Center[1])
     m0 = A*Center[2]**2+B*Center[1]**2-C
-
+    #X
     x = -m1/(2*m2)
+    det = m1**2-4*m2*m0
+
+    if det < 0:
+        print("\nOops! Unexpected error (x), please try again\n")
+        return 0, 0;
+    
     if a[0]>0:
         if a[2]>0:
-            x += math.sqrt(m1**2-4*m2*m0)/(2*m2)
+            x += math.sqrt(det)/(2*m2)
         else:
-            x -= math.sqrt(m1**2-4*m2*m0)/(2*m2)
+            x -= math.sqrt(det)/(2*m2)
     else:
         if a[1]>0:
-            x += math.sqrt(m1**2-4*m2*m0)/(2*m2)
+            x += math.sqrt(det)/(2*m2)
         else:
-            x -= math.sqrt(m1**2-4*m2*m0)/(2*m2)
-            
-    y=math.sqrt(b2[1]*(((x-Center[1])/a[1])**2-1))
+            x -= math.sqrt(det)/(2*m2)
+    #Y
+    temp = b2[1]*(((x-Center[1])/a[1])**2-1)
+    if temp < 0:
+        print("\nOops! Unexpected error (y), please try again\n")
+        return 0, 0;
+    
+    y=-math.sqrt(temp)
     return x*100, y*100;
 
-### MAIN ###
+def Plot(X,Y):
+    #Converts list to numpy array
+    X = np.array(X)
+    Y = np.array(Y)
+    #Plotting
+    plt.style.use('dark_background')
+    circle = plt.Circle((5, -6.7), 4.7, color='b', fill=False)
+    
+    fig, ax = plt.subplots()
+    ax.scatter(X,Y, color='m')
+    ax.scatter([-19.3,0,19.3],[0,0,0], color='r')
+    ax.set_xlim(-20,20)
+    ax.set_ylim(-20,-0)
+    ax.set_aspect('equal')
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(5))
+    ax.grid(linestyle='-', linewidth=0.3)
+    ax.add_patch(circle)
 
-ReadSave()
+    plt.show()
+    
+### MAIN ###
 
 #Constants
 v = 343
-L = .193
-
-#Read data from txt file
-Data = np.loadtxt("Data.txt")
-N = int(len(Data)/3)
-
-#Save in
-X = np.zeros(N)
-Y = np.zeros(N)
-
-#Estimates origin point of each sound
-for ii in range(N):
-    X[ii], Y[ii]=Multi(Data[ii*3],Data[ii*3+1],Data[ii*3+2])
-    print(X[ii])
-    print(Y[ii])
-
-plt.scatter(X,Y)
-plt.scatter([-19.3,0,19.3],[0,0,0])
-#plt.contour(x, y,(x**2/a**2 - y**2/b**2), [1], colors='k')
-plt.xlim(-20,20)
-plt.ylim(0,20)
-plt.show()
+#String
+new = "y"
+#Saves
+X=[]
+Y=[]
+while("y" == new):
+        #Comunicates with the Arduino
+        ReadSave()
+        #Reads data from txt file
+        Data = np.loadtxt("Data.txt")
+        #Estimates origin point of each sound
+        x, y=Multi(Data[0],Data[1],Data[2])
+        #Prints when math errors
+        if x == 0 and y == 0:
+            continue
+        print(x)
+        print(y)
+        #Saves
+        X.append(x)
+        Y.append(y)
+        #Plot
+        Plot(X,Y)
+        #Asks if it's a valid point
+        good = input("\nDo you accept this point? [y/n]")
+        if good == 'n':
+            del X[-1]
+            del Y[-1]
+        #Asks to meassure more points
+        new = input("Continue? [y/n] ")
