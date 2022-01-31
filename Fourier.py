@@ -164,12 +164,14 @@ def Golpe():
 
 def Accept():
 
+    F = Golpe()
+    
     print('Acepta este dato? [y/n]')
 
     a = input()
 
     if a == 'y':
-    
+       
        f.append(F)
         
        print('Desea tomar mas datos? [y/n] ')
@@ -177,8 +179,8 @@ def Accept():
        b = input()
         
        if b == 'y':
-           Golpe()
            Accept()
+           return
        if b == 'n':
            pd.DataFrame(f).to_csv("FFT/freqs.csv")
            print(f)
@@ -187,8 +189,7 @@ def Accept():
         print('Entrada no válida. Desea tomar mas datos? [y/n] ')
         b = input()
     if a == 'n':
-      F = Golpe()
       Accept() 
        
-F = Golpe()
+
 Accept()
