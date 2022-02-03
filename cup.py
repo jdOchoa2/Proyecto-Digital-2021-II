@@ -7,26 +7,24 @@ datf = np.genfromtxt('freqs.csv',delimiter = ',')
 
 f= datf[1:,1]
 
-#f= [1500,2000,1500]
-
 #Importar datos de posición
 
-data = np.genfromtxt('Location.txt',delimiter ="\t")
+data = np.genfromtxt('position.csv',delimiter =',')
 
 
 #Taza
 
-xT = data[0,0]
+xT = data[1,1]
 
-yT = data[0,1]
+yT = data[1,2]
 
-rT = data[0,2]
+rT = data[1,3]
 
 #Golpes
 
-x = data[1:,0]
+x = data[2:,1]
 
-y = data [1:,1]
+y = data [2:,2]
 
 #x = [-np.sqrt(2)/2,0 , np.sqrt(2)/2]
 
@@ -34,8 +32,8 @@ y = data [1:,1]
 
 #Transformación al sistema de la taza
 
-#x = x - xT
-#y = y - yT
+x = x - xT
+y = y - yT
 
 #Evaluación de las frecuencias
 
@@ -92,13 +90,13 @@ plt.plot(xB,yB,'b.', markersize = 6)
 
 mR = np.array(yR) / np.array(xR)
 
-t = np.linspace(-2,2,500)
+t = np.linspace(-2-rT,2+rT,1000)
 
 for i in range(len(mR)):
     plt.plot(t,t*mR[i],'k--',lw='0.8')
-
+    plt.plot(t,-t/(mR[i]),'k--',lw='0.8')
 #ejes
-plt.axis([-2,2,-2,2])
+plt.axis([-2-rT,2+rT,-2-rT,2+rT])
 
 plt.show()
 
