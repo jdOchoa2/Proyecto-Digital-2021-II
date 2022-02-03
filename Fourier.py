@@ -16,7 +16,7 @@ M=50
 
 #Definir entradas Arduino
 
-
+ #Asks to accept point
 
 #Umbral para inicio toma datos con sensor ajustado en sensibilidad ~660
 
@@ -29,7 +29,7 @@ f = []
 
 def Golpe():
 
-    ser = serial.Serial('COM3', 9600, timeout=1)
+    ser = serial.Serial('/dev/cu.usbmodem14201', 9600, timeout=1)
     time.sleep(2)
 
     #M: Número de datos a tomar
@@ -100,11 +100,11 @@ def Golpe():
 
     #Guardar datos
 
-    pd.DataFrame(Table).to_csv("FFT/one.csv")
+    pd.DataFrame(Table).to_csv("one.csv")
 
     time.sleep(2)
 
-    one = genfromtxt('FFT/one.csv', delimiter=',')
+    one = genfromtxt('one.csv', delimiter=',')
 
     #Lectura de datos 
 
@@ -165,13 +165,14 @@ def Golpe():
 def Accept():
 
     F = Golpe()
-    
+
     print('Acepta este dato? [y/n]')
 
     a = input()
-
+    
+    
     if a == 'y':
-       
+
        f.append(F)
         
        print('Desea tomar mas datos? [y/n] ')
@@ -180,16 +181,25 @@ def Accept():
         
        if b == 'y':
            Accept()
-           return
        if b == 'n':
-           pd.DataFrame(f).to_csv("FFT/freqs.csv")
+           pd.DataFrame(f).to_csv("freqs.csv")
            print(f)
            exit()
        else:
         print('Entrada no válida. Desea tomar mas datos? [y/n] ')
         b = input()
     if a == 'n':
-      Accept() 
-       
 
+      print('Desea tomar mas datos? [y/n] ')
+        
+      b = input()
+        
+      if b == 'y':
+           
+           Accept()
+      if b == 'n':
+           pd.DataFrame(f).to_csv("freqs.csv")
+           print(f)
+           exit()
+       
 Accept()

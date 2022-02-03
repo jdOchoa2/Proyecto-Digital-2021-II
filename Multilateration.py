@@ -2,7 +2,10 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from sympy.solvers import solve
+import sympy as sym
 import serial
+import sys
 
 def ReadSave():
     File = open("Data.txt",'w')
@@ -10,24 +13,29 @@ def ReadSave():
     print("\nReady to go\n")
     for ii in range(3):
         data = str(ser.readline())
-        print(data)
         File.write(data[2:(len(data)-5)])
         File.write('\n')
     File.close()
-
-def Multi(LR,LC,CR):
+    
+def Secants(LR, LC, CR, cup, radius):
+    #Units to meters
+    Cup = [0,0]
+    for ii in range(2):
+        Cup[ii] = cup[ii] / 100
+    Radius = radius/100
     #Neccesary arrays
     Center = np.zeros(3)
     a = np.zeros(3)
     b2 = np.zeros(3)
     c = np.zeros(3)
-
+    Ix = []
+    Iy = []
+    #Hyperbola variables
     a[0] = LR
     a[1] = LC
     a[2] = CR
-    
-    #Hiperbola variables
     a[:] *= v/(2e6)
+
     Center[0] = 0.45
     Center[1] = -49/2+0.45
     Center[2] = 49/2+0.45
@@ -37,63 +45,41 @@ def Multi(LR,LC,CR):
     c[1] = 49/2
     c[2] = 49/2
     c[:] /= 100
-    
+
+    #Sympy solution to the system
+    P = sym.Symbol('P', real = "True")
     for jj in range(3):
         b2[jj] = c[jj]**2 - a[jj]**2
-
-    #Solution
-    A = 1/a[2]**2
-    B = -(b2[1]/(b2[2]*a[1]**2))
-    C = 1 - (b2[1]/b2[2])
-
-    m2 = A+B
-    m1 = -2*(A*Center[2]+B*Center[1])
-    m0 = A*Center[2]**2+B*Center[1]**2-C
-    #X
-    x = -m1/(2*m2)
-    det = m1**2-4*m2*m0
-
-    if det < 0:
-        print("\nOops! Unexpected error (x), please try again\n")
-        return 0, 0,  a, b2, Center
-    
-    if a[0]>0:
-        if a[2]>0:
-            x += math.sqrt(det)/(2*m2)
-        else:
-            x -= math.sqrt(det)/(2*m2)
-    else:
-        if a[1]>0:
-            x += math.sqrt(det)/(2*m2)
-        else:
-            x -= math.sqrt(det)/(2*m2)
-    #Y
-    temp = b2[1]*(((x-Center[1])/a[1])**2-1)
-    if temp < 0:
-        print("\nOops! Unexpected error (y), please try again\n")
-        return 0, 0, a, b2, Center
-    
-    y=-math.sqrt(temp)
-    return x*100, y*100, a, b2, Center;
-
-def Plot(X,Y,a,b2,Center):
+        #Points of the cup that intercept each all the hyperbolas
+        Solution = solve( (P-Cup[0])**2 + (-sym.sqrt( b2[jj]*( (P-Center[jj])**2 / a[jj]**2 - 1))-Cup[1])**2 - Radius**2, P)
+        for kk in Solution:
+            #Symplify solution
+            xs = sym.N(kk)
+            Ix.append(xs*100)
+            ys = -math.sqrt(b2[jj]*( (xs-Center[jj])**2 / a[jj]**2 -1))
+            #Discard points
+            if ys < Cup[1]:
+                Ix.pop(-1)
+            else:
+                Iy.append(ys*100) 
+    return Ix, Iy, a, b2, Center
+        
+def Plot(X,Y,a,b2,Center,cup,radius):
     #Converts list to numpy array
     X = np.array(X)
-    Y = np.array(Y)
-    
+    Y = np.array(Y) 
     plt.style.use('dark_background')
     fig, ax = plt.subplots()
-
-    #Origins
+    #Posible origins
     ax.scatter(X,Y, color='m')
     #Sensors
     ax.scatter([-48.55,0,48.55],[0,0,0], color='r')
     #Cup
-    circle = plt.Circle((11.5, -16), 4.7, color='b', fill=False)
+    circle = plt.Circle((cup[0], cup[1]), radius, color='b', fill=False)
     ax.add_patch(circle)
     #Hiperbolas
-    xr = np.linspace(-50, 50, 400)
-    yr = np.linspace(0, -50, 400)
+    xr = np.linspace(-100, 100, 400)
+    yr = np.linspace(0, -100, 400)
     xr, yr = np.meshgrid(xr, yr)
     Center[:] *= 100
     a *= 100
@@ -101,46 +87,82 @@ def Plot(X,Y,a,b2,Center):
     ax.contour(xr, yr,((xr-Center[0])**2/a[0]**2 - (yr)**2/b2[0]), [1], colors='w', linestyles='dashed', linewidths=0.5)
     ax.contour(xr, yr,((xr-Center[1])**2/a[1]**2 - (yr)**2/b2[1]), [1], colors='w', linestyles='dashed', linewidths=0.5)
     ax.contour(xr, yr,((xr-Center[2])**2/a[2]**2 - (yr)**2/b2[2]), [1], colors='w', linestyles='dashed', linewidths=0.5)
-
-    ax.set_xlim(0,50)
-    ax.set_ylim(-50,-0)
+    Center[:] /= 100
+    a /= 100
+    b2 /= 10000
+    ax.set_xlim(0,30)
+    ax.set_ylim(-80,-50)
     ax.set_aspect('equal')
     ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
     ax.grid(linestyle='-', linewidth=0.3)
-   
-
     plt.show()
+
+def print_array(A):
+    for ii in A:
+        print("{:.2f}".format(ii),"\t",end="")
+    print()
+
+def mid_point(X,Y,cup,radius):
+    mean_theta = 0
+    for ii in range(len(X)):
+        mean_theta += math.asin((X[ii] - cup[0])/(Y[ii] - cup[1]))
+    mean_theta /= len(X)
+    Point = [ radius*math.sin(mean_theta) + cup[0], radius*math.cos(mean_theta) + cup[1]]
+    return  Point
     
 ### MAIN ###
 
 #Constants
 v = 343
-#String
+#Save
 new = "y"
-#Saves
-X=[]
-Y=[]
+#Cup center
+cup = [int(sys.argv[1]), int(sys.argv[2])]
+radius = 4.1
+#Save cup information to file
+SaveFile = open("Location.txt",'w')
+SaveFile.write(str(cup[0]))
+SaveFile.write("\t")
+SaveFile.write(str(cup[1]))
+SaveFile.write("\t")
+SaveFile.write(str(radius))
+SaveFile.write("\n")
+
 while("y" == new):
         #Comunicates with the Arduino
         ReadSave()
         #Reads data from txt file
         Data = np.loadtxt("Data.txt")
         #Estimates origin point of each sound
-        x, y, a, b2, Center = Multi(Data[0],Data[1],Data[2])
-        #Prints when math errors
-        if x == 0 and y == 0:
-            continue
-        print(x)
-        print(y)
-        #Saves
-        X.append(x)
-        Y.append(y)
-        #Plot
-        Plot(X,Y,a,b2,Center)
-        #Asks if it's a valid point
-        good = input("\nDo you accept this point? [y/n] ")
-        if good == 'n':
-            del X[-1]
-            del Y[-1]
+        print("Finding point. This could take a while...")
+        X,Y,a,b2,Center = Secants(Data[0],Data[1],Data[2],cup,radius)
+        print(X)
+        print(Y)
+        Plot(X,Y,a,b2,Center,cup,radius)
+        #Finds Mid_Point
+        if not len(X) == 0:
+            #Mean = mid_point(X,Y,cup,radius)
+            Mean = [0,0]
+            Plot([Mean[0]],[Mean[1]],a,b2,Center,cup,radius)
+            accept = input("Do you accept this point? [y/n] ")
+            if ("y" == accept):
+                #Saves to file
+                SaveFile.write(str(Mean[0]))
+                SaveFile.write("\t")
+                SaveFile.write(str(Mean[1]))
+                SaveFile.write("\n")
+            else:
+                print_array(X)
+                print_array(Y)
+                Plot(X,Y,a,b2,Center,cup,radius)
+                select = input("Select a point (n for none): ")
+                if  select  in  {"0","1","2","3","4","5"}:
+                    #Saves to file
+                    SaveFile.write(str(X[int(select)]))
+                    SaveFile.write("\t")
+                    SaveFile.write(str(Y[int(select)]))
+                    SaveFile.write("\n")
         #Asks to meassure more points
         new = input("Continue? [y/n] ")
+print("Saving in Location.txt...")
+SaveFile.close()
