@@ -52,7 +52,7 @@ t = np.linspace(-2-rT,2+rT,1000)
 for i in range(len(mR)):
     plt.plot(t,t*mR[i],'k--',lw='0.8')
     
-    if range(len(xR))==1: 
+    if len(xR)==1: 
         plt.plot(t,-t/(mR[i]),'k--',lw='0.8')
         
 plt.axis([-2-rT,2+rT,-2-rT,2+rT])
